@@ -1,0 +1,27 @@
+# TabScore 設定
+database:
+  # プラグインフォルダからの相対パス(SQLite)
+  file: data.db
+  # データ保存の間隔(秒)。停止時・退出時にも必ず保存される
+  flush-interval-seconds: 30
+  # 日別集計を残す日数
+  daily-retention-days: 400
+
+# 名前の右に出す項目の既定値(/tabscore change で変えると DB に保存され、そちらが優先)
+default-metric: mine
+
+# AFK 判定。この秒数、動き・視点・操作が無いと AFK 扱い(playtime:afk に入る)
+afk-seconds: 120
+
+# 日別集計の日付境界に使うタイムゾーン(空なら鯖の既定)
+timezone: ""
+
+# Bot(偽プレイヤー)を記録しない設定
+bots:
+  exclude: true
+  # 名前の正規表現(空なら無効)。例: "^bot_.*"
+  name-regex: ""
+  names: []
+  uuids: []
+  # 接続アドレスを持たないプレイヤー(偽プレイヤー)を除外する
+  exclude-no-address: true

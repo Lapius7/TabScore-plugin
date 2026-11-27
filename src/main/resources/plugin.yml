@@ -1,0 +1,19 @@
+name: TabScore
+version: '${version}'
+main: org.lapius7.tabscore.TabScorePlugin
+api-version: '26.3'
+description: Detailed own-stat tracking and a switchable score for the TAB player list.
+authors: [Lapius7]
+softdepend: [PlaceholderAPI, TAB]
+commands:
+  tabscore:
+    description: TabScore
+    usage: /tabscore <change|me|top|info|reload|import>
+    aliases: [ts]
+permissions:
+  tabscore.use:
+    description: View stats (me / top / info)
+    default: true
+  tabscore.admin:
+    description: Change the shown item, reload, import
+    default: op
