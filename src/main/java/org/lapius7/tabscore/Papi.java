@@ -23,6 +23,8 @@ final class Papi extends PlaceholderExpansion {
             case "unit": return plugin.lang().plain("unit." + plugin.current().cat().unit);
             default: break;
         }
+        String mv = plugin.metrics().get(params);
+        if (mv != null) return mv;
         if (player == null) return "0";
         Selector s = params.equalsIgnoreCase("value") ? plugin.current() : Selector.parseLoose(params);
         if (s == null) return null;

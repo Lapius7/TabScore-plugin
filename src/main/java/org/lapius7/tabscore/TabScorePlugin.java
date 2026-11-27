@@ -28,6 +28,8 @@ public final class TabScorePlugin extends JavaPlugin {
     private io.papermc.paper.threadedregions.scheduler.ScheduledTask flushTask;
     private org.bukkit.scheduler.BukkitTask sampleTask;
     private Importer importer;
+    private Metrics metrics;
+    private org.bukkit.scheduler.BukkitTask metricsTask;
 
     @Override
     public void onEnable() {
@@ -61,6 +63,11 @@ public final class TabScorePlugin extends JavaPlugin {
         flushTask = Bukkit.getAsyncScheduler().runAtFixedRate(this, t -> flushAsync(), period, period, TimeUnit.SECONDS);
         sampleTask = Bukkit.getScheduler().runTaskTimer(this, new Sampler(this)::tick, 20, 20);
 
+        metrics = new Metrics(getConfig().getBoolean("metrics.tile-entities", true));
+        metrics.update();
+        long mt = Math.max(1, Math.round(getConfig().getDouble("metrics.interval-seconds", 1.0) * 20));
+        metricsTask = Bukkit.getScheduler().runTaskTimer(this, metrics::update, mt, mt);
+
         if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new Papi(this).register();
             getLogger().info("PlaceholderAPI expansion registered (%tabscore_value% etc.)");
@@ -75,6 +82,7 @@ public final class TabScorePlugin extends JavaPlugin {
     public void onDisable() {
         if (flushTask != null) flushTask.cancel();
         if (sampleTask != null) sampleTask.cancel();
+        if (metricsTask != null) metricsTask.cancel();
         if (store == null) return;
         long now = System.currentTimeMillis();
         for (PlayerData d : players.values()) store.touchPlayer(d.uuid, d.name, false, now);
@@ -120,6 +128,7 @@ public final class TabScorePlugin extends JavaPlugin {
     Store store() { return store; }
     Lang lang() { return lang; }
     Importer importer() { return importer; }
+    Metrics metrics() { return metrics; }
     Selector current() { return current; }
     Map<UUID, PlayerData> players() { return players; }
     PlayerData data(Player p) { return players.get(p.getUniqueId()); }

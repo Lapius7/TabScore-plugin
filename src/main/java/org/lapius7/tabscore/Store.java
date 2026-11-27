@@ -183,6 +183,51 @@ final class Store {
         });
     }
 
+
+    record ImportPlayer(UUID uuid, String name, long lastSeen, Map<String, Long> totals) { }
+
+    /** 取り込み: 全員分の加算と完了マークを 1 トランザクションで行う(途中で止まれば何も残らない)。 */
+    CompletableFuture<Boolean> importAll(List<ImportPlayer> list, String flagKey, String flagValue, java.util.function.IntConsumer progress) {
+        return run(() -> {
+            c.setAutoCommit(false);
+            try {
+                if (getSettingSync(flagKey) != null) { c.rollback(); return false; }
+                try (PreparedStatement pt = c.prepareStatement(
+                        "INSERT INTO stat_total(uuid,cat,sub,v) VALUES(?,?,?,?) ON CONFLICT(uuid,cat,sub) DO UPDATE SET v=v+excluded.v");
+                     PreparedStatement pp = c.prepareStatement(
+                        "INSERT INTO players(uuid,name,first_login,last_login,logins) VALUES(?,?,?,?,0) ON CONFLICT(uuid) DO NOTHING")) {
+                    int n = 0;
+                    for (ImportPlayer ip : list) {
+                        pp.setString(1, ip.uuid.toString()); pp.setString(2, ip.name);
+                        pp.setLong(3, ip.lastSeen); pp.setLong(4, ip.lastSeen);
+                        pp.executeUpdate();
+                        for (Map.Entry<String, Long> e : ip.totals.entrySet()) {
+                            int i = e.getKey().indexOf('|');
+                            pt.setString(1, ip.uuid.toString());
+                            pt.setString(2, e.getKey().substring(0, i));
+                            pt.setString(3, e.getKey().substring(i + 1));
+                            pt.setLong(4, e.getValue());
+                            pt.addBatch();
+                        }
+                        pt.executeBatch();
+                        progress.accept(++n);
+                    }
+                }
+                try (PreparedStatement p = c.prepareStatement("INSERT INTO settings(k,v) VALUES(?,?)")) {
+                    p.setString(1, flagKey); p.setString(2, flagValue);
+                    p.executeUpdate();
+                }
+                c.commit();
+                return true;
+            } catch (Exception e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
+        });
+    }
+
     CompletableFuture<Void> touchPlayer(UUID uuid, String name, boolean login, long now) {
         return run(() -> {
             try (PreparedStatement p = c.prepareStatement(login

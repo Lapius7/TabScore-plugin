@@ -47,7 +47,25 @@ Paper 26.3 用プラグイン。タブリストのプレイヤー名の右に出
 | `%tabscore_selector%` / `%tabscore_unit%` | 項目 ID / 単位 |
 | `%tabscore_<項目>%` | 任意項目の整数値。`%tabscore_mine:stone%` または `%tabscore_mine_stone_today%` |
 
-値はオンラインのプレイヤーのみメモリから返します(オフラインは 0)。重い処理はしません。
+値はオンラインのプレイヤーのみメモリから返します(オフラインは 0)。DB は読みません。
+
+### サーバー負荷プレースホルダー
+
+PAPI 標準の `%server_total_entities%` は TAB が非同期スレッドから呼ぶと解決しません。これらはメインスレッドで集計してキャッシュした値を返すので、どのスレッドから呼んでも解決します(プレイヤー不要)。
+
+| プレースホルダー | 値 |
+|---|---|
+| `%tabscore_entities%` / `%tabscore_living%` | 全ワールドのエンティティ数 / うち生物数 |
+| `%tabscore_tiles%` | タイルエンティティ数(読み込み済みチャンク) |
+| `%tabscore_chunks%` / `%tabscore_forced%` | 読み込み済みチャンク数 / 強制ロードチャンク数 |
+| `%tabscore_players%` | オンライン人数 |
+| `%tabscore_entities_<world>%` / `%tabscore_chunks_<world>%` | ワールド別(例 `%tabscore_entities_world_nether%`) |
+| `%tabscore_tps1%` `%tabscore_tps5%` `%tabscore_tps15%` | TPS(上限 20、小数1桁) |
+| `%tabscore_mspt%` | 平均 tick 時間(ms) |
+| `%tabscore_cpu%` | プロセスの CPU 使用率(%) |
+| `%tabscore_ram_used%` `%tabscore_ram_alloc%` `%tabscore_ram_max%` | 使用中 / 確保済み / 上限(MB) |
+
+`config.yml` の `metrics.interval-seconds`(既定 1)で集計間隔、`metrics.tile-entities: false` でタイルエンティティ数の集計(全ロード済みチャンクを走査)を止められます。
 
 ## TAB の設定(Jori への導入時)
 
@@ -75,5 +93,6 @@ Bot 除外は `bots.name-regex` / `bots.names` / `bots.uuids` と、接続アド
 - イベントはメモリ上で集計し、別スレッドで `flush-interval-seconds` ごと・退出時・停止時に SQLite へ書きます。メインスレッドで I/O はしません。
 - スキーマ版を DB に持ち、古い DB は起動時に順に移行します。新しい版の DB は読み込みを拒否します。
 - 移動距離・稼働時間は毎秒サンプリングします。テレポートは距離に入れません。
+- `import` は本体の統計 JSON(`<ワールド>/players/stats/<uuid>.json`)を別スレッドで読み、オフラインのプレイヤーも含めて全員分を取り込みます。`getStatistic` は使いません。進捗はチャットに出ます。SQLite へは1トランザクションで書き、「取り込み済み」の印を最後に同じトランザクションで書くので、途中で再起動しても二重加算されず、やり直せます。
 - `import` はプレイ中の統計の近似を含みます: 本体に「置いた数」が無いため、ブロックの「使用数」を `place` に入れます。本体の死亡数・ダメージは種別が無いので `imported` キーに入ります。
 - 作成(`craft`)の Shift クリックは、材料の最小スタック数で概算します。

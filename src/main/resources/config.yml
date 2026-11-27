@@ -25,3 +25,9 @@ bots:
   uuids: []
   # 接続アドレスを持たないプレイヤー(偽プレイヤー)を除外する
   exclude-no-address: true
+
+# サーバー負荷プレースホルダー(%tabscore_entities% など)。主スレッドで集計してキャッシュする
+metrics:
+  interval-seconds: 1
+  # タイルエンティティ数(%tabscore_tiles%)の集計。読み込みチャンクが多い鯖で重ければ false
+  tile-entities: true
